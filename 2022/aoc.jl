@@ -11,7 +11,6 @@ end
 function two()
     lines = open(f -> read(f, String), "day2_input.txt")
     lines = split(lines, "\n", keepempty=false)
-    score1 = score2 = 0
     d1 = Dict(  # shape + outcome
         "A X" => 1 + 3, "A Y" => 2 + 6, "A Z" => 3 + 0,
         "B X" => 1 + 0, "B Y" => 2 + 3, "B Z" => 3 + 6,
@@ -28,5 +27,30 @@ function two()
     println(score2)
 end
 
-two()
+function three()
+    priority(chr) = chr in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ? Int(chr) - 38 : Int(chr) - 96
+    lines = split(open(f -> read(f, String), "day3_input.txt"), "\n", keepempty=false)
+    total1 = total2 = 0
+    for line in lines
+        first, last = line[begin:length(line)÷2], line[length(line)÷2+1:end]
+        for chr in first
+            if chr in last
+                total1 += priority(chr)
+                break
+            end
+        end
+    end
+    lines3 = map(n -> (lines[n], lines[n+1], lines[n+2]), 1:3:length(lines))
+    for (first, second, third) in lines3
+        for chr in first
+            if chr in second && chr in third
+                total2 += priority(chr)
+                break
+            end
+        end
+    end
+    println(total1)
+    println(total2)
+end
 
+three()
