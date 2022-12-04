@@ -53,4 +53,22 @@ function three()
     println(total2)
 end
 
-three()
+function four()
+    lines = split(open(f -> read(f, String), "2022/input.txt"), "\n", keepempty=false)
+    count1 = count2 = 0
+    for line in lines
+        first, second = split(line, ',')
+        f1, f2 = parse.(Int, split(first, '-'))
+        s1, s2 = parse.(Int, split(second, '-'))
+        if (f1 in s1:s2 && f2 in s1:s2) || (s1 in f1:f2 && s2 in f1:f2)
+            count1 += 1
+        end
+        if (f1 in s1:s2 || f2 in s1:s2) || (s1 in f1:f2 || s2 in f1:f2)
+            count2 += 1
+        end
+    end
+    println(count1)        
+    println(count2)
+end
+
+four()
