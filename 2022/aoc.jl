@@ -77,4 +77,34 @@ function four()
     println(count2)
 end
 
-four()
+function five()
+    # https://adventofcode.com/2022/day/5
+    # parse input
+    lines = split(open(f -> read(f, String), "day5_input.txt"), "\n", keepempty=true)
+    n = findfirst(x -> isempty(x), lines)
+    crate_lines = lines[1:n-2]
+    crate_range = 2:4:length(lines[1])
+    crates1 = [[] for _ in 1:length(crate_range)]
+    for crate_line in crate_lines
+        for (index, chr) in enumerate(crate_line[crate_range])
+            chr != ' ' && pushfirst!(crates1[index], chr)
+        end
+    end
+    crates2 = deepcopy(crates1)
+    # move crates
+    for move in lines[n+1:end-1]
+        _, repetitions, _, src, _, dest = tryparse.(Int, split(move, " "))
+        temp = []  # to reverse all moved crates in this move at once
+        for _ in 1:repetitions
+            push!(crates1[dest], pop!(crates1[src]))
+            pushfirst!(temp, pop!(crates2[src]))
+        end
+        push!(crates2[dest], temp...)
+    end
+    print(join([stack[end] for stack in crates1]))
+    println()
+    print(join([stack[end] for stack in crates2]))
+    println()
+end
+
+five()
