@@ -1,6 +1,5 @@
 function one()
-    lines = open(f -> read(f, String), "day1_input.txt")
-    lines = split(lines, "\n\n", keepempty=false)
+    lines = split(open(f -> read(f, String), "day1_input.txt"), "\n\n", keepempty=false)
     sums = map(line -> map(arr -> parse.(Int64, arr), split(line, "\n", keepempty=false)), lines)
     sums = map(arr -> sum(arr), sums)
     sort!(sums)
@@ -9,8 +8,7 @@ function one()
 end
 
 function two()
-    lines = open(f -> read(f, String), "day2_input.txt")
-    lines = split(lines, "\n", keepempty=false)
+    lines = split(open(f -> read(f, String), "day2_input.txt"), "\n", keepempty=false)
     d1 = Dict(  # shape + outcome
         "A X" => 1 + 3, "A Y" => 2 + 6, "A Z" => 3 + 0,
         "B X" => 1 + 0, "B Y" => 2 + 3, "B Z" => 3 + 6,
@@ -28,8 +26,8 @@ function two()
 end
 
 function three()
-    priority(chr) = chr in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ? Int(chr) - 38 : Int(chr) - 96
     lines = split(open(f -> read(f, String), "day3_input.txt"), "\n", keepempty=false)
+    priority(chr) = chr in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ? Int(chr) - 38 : Int(chr) - 96
     total1 = total2 = 0
     for line in lines
         first, last = line[begin:length(line)÷2], line[length(line)÷2+1:end]
@@ -54,7 +52,7 @@ function three()
 end
 
 function four()
-    lines = split(open(f -> read(f, String), "2022/input.txt"), "\n", keepempty=false)
+    lines = split(open(f -> read(f, String), "day4_input.txt"), "\n", keepempty=false)
     count1 = count2 = 0
     for line in lines
         first, second = split(line, ',')
@@ -67,7 +65,7 @@ function four()
             count2 += 1
         end
     end
-    println(count1)        
+    println(count1)
     println(count2)
 end
 
