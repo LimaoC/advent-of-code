@@ -1,4 +1,5 @@
 function one()
+    # https://adventofcode.com/2022/day/1
     lines = split(open(f -> read(f, String), "day1_input.txt"), "\n\n", keepempty=false)
     sums = map(line -> map(arr -> parse.(Int64, arr), split(line, "\n", keepempty=false)), lines)
     sums = map(arr -> sum(arr), sums)
@@ -8,6 +9,7 @@ function one()
 end
 
 function two()
+    # https://adventofcode.com/2022/day/2
     lines = split(open(f -> read(f, String), "day2_input.txt"), "\n", keepempty=false)
     d1 = Dict(  # shape + outcome
         "A X" => 1 + 3, "A Y" => 2 + 6, "A Z" => 3 + 0,
@@ -26,11 +28,13 @@ function two()
 end
 
 function three()
+    # https://adventofcode.com/2022/day/3
     lines = split(open(f -> read(f, String), "day3_input.txt"), "\n", keepempty=false)
     priority(chr) = chr in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ? Int(chr) - 38 : Int(chr) - 96
     total1 = total2 = 0
     for line in lines
         first, last = line[begin:length(line)÷2], line[length(line)÷2+1:end]
+        # find common item
         for chr in first
             if chr in last
                 total1 += priority(chr)
@@ -40,6 +44,7 @@ function three()
     end
     lines3 = map(n -> (lines[n], lines[n+1], lines[n+2]), 1:3:length(lines))
     for (first, second, third) in lines3
+        # find common item
         for chr in first
             if chr in second && chr in third
                 total2 += priority(chr)
@@ -52,15 +57,18 @@ function three()
 end
 
 function four()
+    # https://adventofcode.com/2022/day/4
     lines = split(open(f -> read(f, String), "day4_input.txt"), "\n", keepempty=false)
     count1 = count2 = 0
     for line in lines
         first, second = split(line, ',')
         f1, f2 = parse.(Int, split(first, '-'))
         s1, s2 = parse.(Int, split(second, '-'))
+        # check either range fully contains the other
         if (f1 in s1:s2 && f2 in s1:s2) || (s1 in f1:f2 && s2 in f1:f2)
             count1 += 1
         end
+        # check either range overlaps
         if (f1 in s1:s2 || f2 in s1:s2) || (s1 in f1:f2 || s2 in f1:f2)
             count2 += 1
         end
