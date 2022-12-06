@@ -107,4 +107,19 @@ function five()
     println()
 end
 
-five()
+function six()
+    # https://adventofcode.com/2022/day/6
+    string = open(f -> read(f, String), "day5_input.txt")[begin:end-1]
+    is_unique(s) = length(unique(s)) == length(s)
+    offsets = (3, 13)  # message length - 1
+    for offset in offsets
+        for index in 1:length(string)-offset
+            if is_unique(string[index:index+offset])
+                println(index + offset)
+                break
+            end
+        end
+    end
+end
+
+six()
