@@ -122,4 +122,76 @@ function six()
     end
 end
 
-six()
+function seven()
+    # https://adventofcode.com/2022/day/7
+    commands = split(open(f -> read(f, String), "day7_input.txt"), "\$ ", keepempty=false)
+    root = [0, Dict()]
+    current_path = []
+    current_dir = root
+    for command in commands
+        lines = split(command, "\n", keepempty=false)
+        if lines[1] == "ls"
+            for output in lines[2:end]
+                type, name = split(output, " ", keepempty=false)
+                if type == "dir"  # directory
+                    if !get(current_dir[2], name, false)
+                        # create directory
+                        current_dir[2][name] = [0, Dict()]
+                    end
+                else  # file
+                    size = parse(Int64, type)
+                    temp_dir = root
+                    temp_dir[1] += size
+                    for path in current_path
+                        temp_dir = temp_dir[2][path]
+                        temp_dir[1] += size
+                    end
+                end
+            end
+        elseif startswith(lines[1], "cd")
+            dest = split(lines[1], " ")[end]
+            if dest == "/"
+                current_dir = root
+            elseif dest == ".."
+                pop!(current_path)
+                current_dir = root
+                for path in current_path
+                    current_dir = current_dir[2][path]
+                end
+            else
+                push!(current_path, dest)
+                current_dir = current_dir[2][dest]
+            end
+        end
+    end
+
+    function calc_sizes(dir)
+        # part 1, calculate sum of file sizes that are at most 100,000
+        size = 0
+        if dir[1] <= 100000
+            size += dir[1]
+        end
+        for (_, subdir) in dir[2]
+            size += calc_sizes(subdir)
+        end
+        return size
+    end
+
+    dirs = []  # all dirs that are eligible in part 2
+    function find_dir(dir)
+        # part 2, find smallest dir that can be deleted to free up
+        # 30,000,000 - (70,000,000 - root[1]) space
+        if dir[1] >= 30000000 - (70000000 - root[1])
+            push!(dirs, dir[1])
+        end
+        for (_, subdir) in dir[2]
+            find_dir(subdir)
+        end
+    end
+
+    println(calc_sizes(root))
+    find_dir(root)
+    println(minimum(dirs))
+end
+
+seven()
