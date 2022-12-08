@@ -194,4 +194,33 @@ function seven()
     println(minimum(dirs))
 end
 
-seven()
+function eight()
+    # https://adventofcode.com/2022/day/8
+    lines = split(open(f -> read(f, String), "day8_input.txt"), "\n", keepempty=false)
+    lines = map(line -> parse.(Int64, split(line, "", keepempty=false)), lines)
+    trees = reduce(hcat, lines)'
+
+    function is_visible(row, col)  # part 1
+        rowv, colv = trees[row, :], trees[:, col]
+        dirs = (colv[begin:row-1], colv[row+1:end], rowv[begin:col-1], rowv[col+1:end])
+        return any(map(dir -> all(trees[row, col] .> dir), dirs))
+    end
+
+    function scenic_score(row, col)  # part 2
+        scores = [0, 0, 0, 0]
+        rowv, colv = trees[row, :], trees[:, col]
+        dirs = (reverse(colv[begin:row-1]), colv[row+1:end], reverse(rowv[begin:col-1]), rowv[col+1:end])
+        for (index, dir) in enumerate(dirs)
+            for tree in dir
+                scores[index] += 1
+                tree >= trees[row, col] && break
+            end
+        end
+        return prod(scores)
+    end
+
+    println(sum([is_visible(i[1], i[2]) for i in eachindex(trees)]))
+    println(maximum([scenic_score(i[1], i[2]) for i in eachindex(trees)]))
+end
+
+eight()
