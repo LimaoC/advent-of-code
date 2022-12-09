@@ -223,4 +223,69 @@ function eight()
     println(maximum([scenic_score(i[1], i[2]) for i in eachindex(trees)]))
 end
 
-eight()
+function nine()
+    # https://adventofcode.com/2022/day/9
+    lines = split(open(f -> read(f, String), "day9_input.txt"), "\n", keepempty=false)
+
+    UP, DOWN, LEFT, RIGHT = (0, 1), (0, -1), (-1, 0), (1, 0)
+    NE, SE, SW, NW = (1, 1), (1, -1), (-1, -1), (-1, 1)
+
+    function is_touching(n1::Tuple{Int64, Int64}, n2::Tuple{Int64, Int64})
+        dist = abs(n1[1] - n2[1]) + abs(n1[2] - n2[2])
+        dist <= 1 && return true
+        dist == 2 && return n1[1] != n2[1] && n1[2] != n2[2]
+    end
+
+    function move_delta(direction::SubString)
+        direction == "U" && return UP
+        direction == "D" && return DOWN
+        direction == "L" && return LEFT
+        direction == "R" && return RIGHT
+    end
+
+    function move(n1::Tuple{Int64, Int64}, n2::Tuple{Int64, Int64})
+        if n1[1] == n2[1] || n1[2] == n2[2]
+            directions = [UP, DOWN, LEFT, RIGHT]
+        else
+            directions = [NE, SE, SW, NW]
+        end
+        for direction in directions
+            is_touching(n1, n2 .+ direction) && return n2 .+ direction
+        end
+    end
+
+    # part 1
+    visited1 = Set([(0, 0)])
+    nodes1 = [(0, 0), (0, 0)]
+    # part 2
+    visited2 = Set([(0, 0)])
+    nodes2 = [(0, 0) for _ in 1:10]
+    for line in lines
+        direction, units = split(line, " ")
+        direction = move_delta(direction)
+        units = parse(Int64, units)
+        for _ in 1:units
+            # part 1
+            nodes1[1] = nodes1[1] .+ direction
+            if !is_touching(nodes1[1], nodes1[2])
+                nodes1[2] = move(nodes1[1], nodes1[2])
+                push!(visited1, nodes1[2])
+            end
+
+            # part 2
+            nodes2[1] = nodes2[1] .+ direction
+            prev = nodes2[1]
+            for i in 2:10
+                if !is_touching(prev, nodes2[i])
+                    nodes2[i] = move(prev, nodes2[i])
+                    i == 10 && push!(visited2, nodes2[i])
+                end
+                prev = nodes2[i]
+            end
+        end
+    end
+    println(length(visited1))
+    println(length(visited2))
+end
+
+nine()
