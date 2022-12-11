@@ -306,4 +306,63 @@ function ten(; input::String = "2022/day10_input.txt")
     println([join(line, " ") * "\n" for line in eachrow(crt)]...)
 end
 
-ten()
+function eleven(; input::String = "2022/day11_input.txt")
+    # parse input
+    data = strvec(input)
+    function initial_state()
+        items = []
+        operations = []
+        tests = []
+        modulos = []
+        for i in 1:6:length(data)
+            itms = split(data[i+1][findfirst(':', data[i+1])+2:end], ", ")
+            push!(items, parse.(Int64, itms))
+            ops = data[i+2][findfirst(':', data[i+2])+2:end]
+            value = ops[findlast(' ', ops)+1:end]
+            push!(operations,  # absolutely cursed, but it works
+                x -> ('*' in ops ? (*) : (+))(x, value == "old" ? x : parse(Int64, value))
+            )
+            div = parse(Int64, data[i+3][findlast(' ', data[i+3])+1:end])
+            true_monkey = parse(Int64, data[i+4][findlast(' ', data[i+4])+1:end])
+            false_monkey = parse(Int64, data[i+5][findlast(' ', data[i+5])+1:end])
+            push!(tests, x -> (x % div == 0) ? true_monkey : false_monkey)
+            push!(modulos, div)  # for part 2
+        end
+        return items, operations, tests, modulos
+    end
+
+    # simulate
+    items, operations, tests, _ = initial_state()  # part 1
+    times_inspected1 = [0 for _ in 1:8]
+    for _ in 1:20
+        for monkey in 1:length(data) ÷ 6
+            for i in 1:length(items[monkey])
+                times_inspected1[monkey] += 1
+                items[monkey][i] = operations[monkey](items[monkey][i]) ÷ 3
+                next_monkey = tests[monkey](items[monkey][i]) + 1
+                push!(items[next_monkey], items[monkey][i])
+            end
+            items[monkey] = []
+        end
+    end
+    items, operations, tests, modulos = initial_state()  # part 2
+    times_inspected2 = [0 for _ in 1:8]
+    modulo = prod(modulos)
+    for _ in 1:10000
+        for monkey in 1:length(data) ÷ 6
+            for i in 1:length(items[monkey])
+                times_inspected2[monkey] += 1
+                items[monkey][i] = operations[monkey](items[monkey][i]) % modulo
+                next_monkey = tests[monkey](items[monkey][i]) + 1
+                push!(items[next_monkey], items[monkey][i])
+            end
+            items[monkey] = []
+        end
+    end
+    sort!(times_inspected1)
+    sort!(times_inspected2)
+    println(times_inspected1[end] * times_inspected1[end-1])
+    println(times_inspected2[end] * times_inspected2[end-1])
+end
+
+eleven()
