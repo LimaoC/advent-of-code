@@ -1,5 +1,6 @@
 using Pkg; Pkg.activate(".")
 using AdventOfCode
+using DataStructures
 
 """https://adventofcode.com/2022/day/1"""
 function one(; input::String = "2022/day1_input.txt")
@@ -306,6 +307,7 @@ function ten(; input::String = "2022/day10_input.txt")
     println([join(line, " ") * "\n" for line in eachrow(crt)]...)
 end
 
+"""https://adventofcode.com/2022/day/11"""
 function eleven(; input::String = "2022/day11_input.txt")
     # parse input
     data = strvec(input)
@@ -365,4 +367,38 @@ function eleven(; input::String = "2022/day11_input.txt")
     println(times_inspected2[end] * times_inspected2[end-1])
 end
 
-eleven()
+"""https://adventofcode.com/2022/day/12"""
+function twelve(; input::String = "2022/day12_input.txt")
+    data = chrmatrix(input)
+    start, exit = findfirst(==('S'), data).I, findfirst(==('E'), data).I
+    elevation(chr) = chr == 'S' ? 1 : (chr == 'E' ? 26 : Int(chr) - 96)
+    nrow, ncol = size(data)[1], size(data)[2]
+
+    q = Queue{Tuple{Int64, Tuple{Int64, Int64}}}()
+    enqueue!(q, (0, exit))
+    visited = [exit]
+    least_steps1 = typemax(Int64)
+    least_steps2 = []
+    while !isempty(q)
+        steps, x = dequeue!(q)
+        steps += 1
+        for dir in [(0, 1), (0, -1), (-1, 0), (1, 0)]
+            p = x .+ dir
+            !(p[1] in 1:nrow && p[2] in 1:ncol) && continue
+            if elevation(data[x...]) - elevation(data[p...]) <= 1
+                if p == start && least_steps1 > steps
+                    least_steps1 = steps
+                elseif elevation(data[p...]) == 1
+                    push!(least_steps2, steps)
+                elseif !(p in visited)
+                    enqueue!(q, (steps, p))
+                    push!(visited, p)
+                end
+            end
+        end
+    end
+    println(least_steps1)
+    println(minimum(least_steps2))
+end
+
+twelve()
