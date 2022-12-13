@@ -1,5 +1,6 @@
 using Pkg; Pkg.activate(".")
 using AdventOfCode
+using Base
 using DataStructures
 
 """https://adventofcode.com/2022/day/1"""
@@ -401,4 +402,61 @@ function twelve(; input::String = "2022/day12_input.txt")
     println(minimum(least_steps2))
 end
 
-twelve()
+"""https://adventofcode.com/2022/day/13"""
+function thirteen(; input::String = "2022/day13_input.txt")
+    data = strvec2(input)
+
+    function conv(str)  # convert string -> list
+	splits = [1, length(str)]
+        elements = []
+        lvl = 0
+        for (i, chr) in enumerate(str)
+            chr == '[' && (lvl += 1)
+            chr == ']' && (lvl -= 1)
+	    chr == ',' && lvl == 1 && insert!(splits, length(splits), i)
+        end
+	if length(splits) == 2
+            str == "[]" && return Vector{Int64}()
+            startswith(str, '[') && return [conv(str[begin+1:end-1])]
+            return parse(Int64, str)
+        end
+        for i in 1:length(splits)-1
+            substr = str[splits[i]+1:splits[i+1]-1]
+            if startswith(substr, '[')
+                push!(elements, conv(substr))
+            elseif length(substr) > 0
+                push!(elements, parse(Int64, substr))
+            end
+        end
+        return elements
+    end
+
+    function comp(arr1, arr2)
+        for (i, e1) in enumerate(arr1)
+            length(arr2) < i && return false  # arr2 ran out
+            e2 = arr2[i]
+            if e1 isa Int64 && e2 isa Int64
+                e1 < e2 && return true
+                e1 > e2 && return false
+	    elseif e1 isa Int64 || e2 isa Int64
+		e1 isa Int64 && (e1 = [e1])
+		e2 isa Int64 && (e2 = [e2])
+	    end
+	    if e1 isa Vector && e2 isa Vector
+		e1 == e2 && continue
+		return comp(e1, e2)
+	    end
+        end
+	return true
+    end
+
+    data2 = strvec(input)
+    dividers = ["[[2]]", "[[6]]"]
+    push!(data2, dividers...)
+    sort!(data2, by=conv, lt=comp)
+
+    println(sum([i for (i, ln) in enumerate(data) if comp(conv(ln[1]), conv(ln[2]))]))
+    println(prod([findfirst(==(d), data2) for d in dividers]))
+end
+
+thirteen()
