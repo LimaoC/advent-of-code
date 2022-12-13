@@ -1,6 +1,5 @@
 using Pkg; Pkg.activate(".")
 using AdventOfCode
-using Base
 using DataStructures
 
 """https://adventofcode.com/2022/day/1"""
