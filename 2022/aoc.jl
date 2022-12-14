@@ -283,6 +283,10 @@ end
 """https://adventofcode.com/2022/day/10"""
 function ten(; input::String = "2022/day10_input.txt")
     data = strvec(input)
+    x = cycle = 1
+    signal_strengths = []  # part 1
+    crt = mapreduce(permutedims, vcat, [[' ' for _ in 1:40] for _ in 1:6])  # part 2
+
     function update_cycle()
         # part 1:
         cycle in [20, 60, 100, 140, 180, 220] && push!(signal_strengths, x * cycle)
@@ -290,9 +294,7 @@ function ten(; input::String = "2022/day10_input.txt")
         (cycle-1) % 40 in x-1:x+1 && (crt[(cycle ÷ 40) + 1, (cycle-1) % 40 + 1] = '#')
         cycle += 1
     end
-    x = cycle = 1
-    signal_strengths = []  # part 1
-    crt = mapreduce(permutedims, vcat, [[' ' for _ in 1:40] for _ in 1:6])  # part 2
+
     for cmd in data
         args = split(cmd, " ")
         if args[1] == "noop"
@@ -303,6 +305,7 @@ function ten(; input::String = "2022/day10_input.txt")
             x += parse(Int64, args[2])
         end
     end
+
     println(sum(signal_strengths))
     println([join(line, " ") * "\n" for line in eachrow(crt)]...)
 end
