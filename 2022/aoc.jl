@@ -461,4 +461,70 @@ function thirteen(; input::String = "2022/day13_input.txt")
     println(prod([findfirst(==(d), data2) for d in dividers]))
 end
 
-thirteen()
+"""https://adventofcode.com/2022/day/14"""
+function fourteen(; input::String = "2022/day14_input.txt")
+    data = strvec(input)
+    rockpaths = []
+    for ln in data
+        push!(rockpaths, map(e -> parse.(Int64, e), split.(split(ln, " -> "), ",")))
+    end
+    # make xmin, xmax bigger for part 2
+    ymax = maximum(map(rp -> maximum(map(e -> e[2], rp)), rockpaths))  # ymin = 0
+    xmin = minimum(map(rp -> minimum(map(e -> e[1], rp)), rockpaths)) - ymax
+    xmax = maximum(map(rp -> maximum(map(e -> e[1], rp)), rockpaths)) + ymax
+    num_sand = 0
+
+    function place_rockpath(cave, rockpath::Vector{Vector{Int64}})
+        # index cave with cave[y, x]
+        for i in 1:length(rockpath)-1
+            first, second = rockpath[i], rockpath[i+1]
+            firstx, firsty = first[1]-xmin+1, first[2]+1
+            secondx, secondy = second[1]-xmin+1, second[2]+1
+            if firstx == secondx
+                yrange = firsty < secondy ? (firsty:secondy) : (secondy:firsty)
+                cave[yrange, firstx] .= '#'
+            else
+                xrange = firstx < secondx ? (firstx:secondx) : (secondx:firstx)
+                cave[firsty, xrange] .= '#'
+            end
+        end
+    end
+
+    in_range(p) = p[1] in 1:ymax+1 && p[2] in 1:xmax-xmin+1
+    function place_sand(cave, p::Tuple{Int64, Int64})
+        below, dleft, dright = map(delta -> p .+ delta, [(1, 0), (1, -1), (1, 1)])
+        b_valid, dl_valid, dr_valid = in_range.((below, dleft, dright))
+        if (!b_valid || (!b_valid && !dl_valid) || (!b_valid && !dl_valid && !dr_valid))
+            return false
+        end
+        cave[below...] == '.' && return place_sand(cave, below)
+        cave[dleft...] == '.' && return place_sand(cave, dleft)
+        cave[dright...] == '.' && return place_sand(cave, dright)
+        cave[p...] = 'o'
+        num_sand += 1
+        return true
+    end
+
+    top = (1, 500-xmin+1)
+    # part 1
+    cave = ['.' for _ in 1:ymax+1, _ in 1:xmax-xmin+1]
+    for rockpath in rockpaths
+        place_rockpath(cave, rockpath)
+    end
+    while place_sand(cave, top) end
+    println(num_sand)
+    # part 2
+    ymax += 2
+    num_sand = 0
+    cave = ['.' for _ in 1:ymax+1, _ in 1:xmax-xmin+1]
+    for rockpath in rockpaths
+        place_rockpath(cave, rockpath)
+    end
+    place_rockpath(cave, [[xmin, ymax], [xmax, ymax]])
+    while place_sand(cave, top)
+        cave[top...] == 'o' && break
+    end
+    println(num_sand)
+end
+
+fourteen()
