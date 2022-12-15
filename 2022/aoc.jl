@@ -31,36 +31,19 @@ end
 """https://adventofcode.com/2022/day/3"""
 function three(; input::String = "2022/day3_input.txt")
     data = strvec(input)
+    data2 = map(n -> data[n:n+2], 1:3:length(data))
     priority(chr) = isuppercase(chr) ? Int(chr) - 38 : Int(chr) - 96
-    total1 = 0
-    for line in data
-        first, second = splitequal(line, 2)
-        total1 += priority(intersect(first, second)[1])
-    end
-    data = map(n -> (data[n], data[n+1], data[n+2]), 1:3:length(data))
-    total2 = 0
-    for (first, second, third) in data
-        total2 += priority(intersect(first, second, third)[1])
-    end
-    println(total1)
-    println(total2)
+    println(sum([priority(intersect(splitequal(line, 2)...)[1]) for line in data]))
+    println(sum([priority(intersect(grp...)[1]) for grp in data2]))
 end
 
 """https://adventofcode.com/2022/day/4"""
 function four(; input::String = "2022/day4_input.txt")
     data = strvec(input)
-    count1 = count2 = 0
-    for line in data
-        first, second = split(line, ',')
-        f1, f2 = parse.(Int, split(first, '-'))
-        s1, s2 = parse.(Int, split(second, '-'))
-        # check either range fully contains the other
-        ((f1 in s1:s2 && f2 in s1:s2) || (s1 in f1:f2 && s2 in f1:f2)) && (count1 += 1)
-        # check either range overlaps
-        ((f1 in s1:s2 || f2 in s1:s2) || (s1 in f1:f2 || s2 in f1:f2)) && (count2 += 1)
-    end
-    println(count1)
-    println(count2)
+    rcontains(f1, f2, s1, s2) = (f1 in s1:s2 && f2 in s1:s2) || (s1 in f1:f2 && s2 in f1:f2)
+    roverlaps(f1, f2, s1, s2) = (f1 in s1:s2 || f2 in s1:s2) || (s1 in f1:f2 || s1 in f1:f2)
+    println(sum([rcontains(parse.(Int64, split(line, [',', '-']))...) for line in data]))
+    println(sum([roverlaps(parse.(Int64, split(line, [',', '-']))...) for line in data]))
 end
 
 """https://adventofcode.com/2022/day/5"""
@@ -68,67 +51,57 @@ function five(; input::String = "2022/day5_input.txt")
     # parse input
     data = strvec(input)
     n = findfirst(line -> startswith(line, "move"), data)
-    crate_data = data[1:n-2]
     crate_range = 2:4:length(data[1])
     crates1 = [[] for _ in 1:length(crate_range)]
-    crates2 = [[] for _ in 1:length(crate_range)]
-    for crate in crate_data
-        for (index, chr) in enumerate(crate[crate_range])
-            chr != ' ' && (pushfirst!(crates1[index], chr); pushfirst!(crates2[index], chr))
+    for crate in data[1:n-2]
+        for (i, chr) in enumerate(crate[crate_range])
+            chr != ' ' && pushfirst!(crates1[i], chr)
         end
     end
+    crates2 = deepcopy(crates1)  # for part 2
+
     # move crates
     for move in data[n:end]
         _, repetitions, _, src, _, dest = tryparse.(Int, split(move, " "))
-        # part 1
-        for _ in 1:repetitions
-            push!(crates1[dest], pop!(crates1[src]))
-        end
-        # part 2
+        # need to push all crates at once for part 2, we'll use a temporary vector for this
         temp = []
         for _ in 1:repetitions
+            push!(crates1[dest], pop!(crates1[src]))
             pushfirst!(temp, pop!(crates2[src]))
         end
         push!(crates2[dest], temp...)
     end
-    print(join([stack[end] for stack in crates1]))
-    println()
-    print(join([stack[end] for stack in crates2]))
-    println()
+    println(join([stack[end] for stack in crates1]))
+    println(join([stack[end] for stack in crates2]))
 end
 
 """https://adventofcode.com/2022/day/6"""
 function six(; input::String = "2022/day6_input.txt")
     data = strsingle(input)
     is_unique(s) = length(unique(s)) == length(s)
-    offsets = (3, 13)  # message length - 1
+    offsets = [3, 13]  # offsets for parts 1 and 2; message length - 1
     for offset in offsets
-        for index in 1:length(data)-offset
-            if is_unique(data[index:index+offset])
-                println(index + offset)
-                break
-            end
-        end
+        i = 1
+        while !is_unique(data[i:i+offset]); i += 1; end
+        println(i+offset)
     end
 end
 
 """https://adventofcode.com/2022/day/7"""
 function seven(; input::String = "2022/day7_input.txt")
     data = strvec(input, "\$ ")
-    root = [0, Dict()]
-    current_path = []
-    current_dir = root
+    current_dir = root = [0, Dict()]  # size, contents
+    current_path = Vector{String}()
     for cmd in data
         lines = split(cmd, "\n", keepempty=false)
         if lines[1] == "ls"
             for output in lines[2:end]
                 type, name = split(output, " ", keepempty=false)
-                if type == "dir"  # directory
+                if type == "dir"  # directory; create if it doesn't exist
                     if !get(current_dir[2], name, false)
-                        # create directory
                         current_dir[2][name] = [0, Dict()]
                     end
-                else  # file
+                else  # file; update sizes for current + all parent directories
                     size = parse(Int64, type)
                     temp_dir = root
                     temp_dir[1] += size
@@ -138,17 +111,17 @@ function seven(; input::String = "2022/day7_input.txt")
                     end
                 end
             end
-        elseif startswith(lines[1], "cd")
+        else  # cd
             dest = split(lines[1], " ")[end]
-            if dest == "/"
+            if dest == "/"  # travel to root
                 current_dir = root
-            elseif dest == ".."
+            elseif dest == ".."  # travel from root down current path
                 pop!(current_path)
                 current_dir = root
                 for path in current_path
                     current_dir = current_dir[2][path]
                 end
-            else
+            else  # directory is in current directory, travel down
                 push!(current_path, dest)
                 current_dir = current_dir[2][dest]
             end
@@ -157,44 +130,36 @@ function seven(; input::String = "2022/day7_input.txt")
 
     function calc_sizes(dir)
         # part 1, calculate sum of file sizes that are at most 100,000
-        size = 0
-        if dir[1] <= 100000
-            size += dir[1]
-        end
+        size = dir[1] <= 100_000 ? dir[1] : 0
         for (_, subdir) in dir[2]
             size += calc_sizes(subdir)
         end
         return size
     end
-
-    dirs = []  # all dirs that are eligible in part 2
-    function find_dir(dir)
-        # part 2, find smallest dir that can be deleted to free up
-        # 30,000,000 - (70,000,000 - root[1]) space
-        if dir[1] >= 30000000 - (70000000 - root[1])
-            push!(dirs, dir[1])
-        end
+    function find_dirs(dir)
+        # part 2, find dirs that can be deleted to free up the required space
+        dirs = []
+        dir[1] >= 30_000_000 - (70_000_000 - root[1]) && push!(dirs, dir[1])
         for (_, subdir) in dir[2]
-            find_dir(subdir)
+            push!(dirs, find_dirs(subdir)...)
         end
+        return dirs
     end
 
     println(calc_sizes(root))
-    find_dir(root)
-    println(minimum(dirs))
+    println(minimum(find_dirs(root)))
 end
 
 """https://adventofcode.com/2022/day/8"""
 function eight(; input::String = "2022/day8_input.txt")
     data = intmatrix(input)
 
-    function is_visible(row, col)  # part 1
+    function is_visible(row::Int64, col::Int64)  # part 1
         rowv, colv = data[row, :], data[:, col]
         dirs = (colv[begin:row-1], colv[row+1:end], rowv[begin:col-1], rowv[col+1:end])
         return any(map(dir -> all(data[row, col] .> dir), dirs))
     end
-
-    function scenic_score(row, col)  # part 2
+    function scenic_score(row::Int64, col::Int64)  # part 2
         scores = [0, 0, 0, 0]
         rowv, colv = data[row, :], data[:, col]
         dirs = (
@@ -227,14 +192,12 @@ function nine(; input::String = "2022/day9_input.txt")
         dist <= 1 && return true
         dist == 2 && return n1[1] != n2[1] && n1[2] != n2[2]
     end
-
     function move_delta(direction::SubString)
         direction == "U" && return UP
         direction == "D" && return DOWN
         direction == "L" && return LEFT
         direction == "R" && return RIGHT
     end
-
     function move(n1::Tuple{Int64, Int64}, n2::Tuple{Int64, Int64})
         if n1[1] == n2[1] || n1[2] == n2[2]
             directions = [UP, DOWN, LEFT, RIGHT]
@@ -245,39 +208,31 @@ function nine(; input::String = "2022/day9_input.txt")
             is_touching(n1, n2 .+ direction) && return n2 .+ direction
         end
     end
-
-    # part 1
-    visited1 = Set([(0, 0)])
-    nodes1 = [(0, 0), (0, 0)]
-    # part 2
-    visited2 = Set([(0, 0)])
-    nodes2 = [(0, 0) for _ in 1:10]
-    for cmd in data
-        direction, units = split(cmd, " ")
-        direction = move_delta(direction)
-        units = parse(Int64, units)
-        for _ in 1:units
-            # part 1
-            nodes1[1] = nodes1[1] .+ direction
-            if !is_touching(nodes1[1], nodes1[2])
-                nodes1[2] = move(nodes1[1], nodes1[2])
-                push!(visited1, nodes1[2])
-            end
-
-            # part 2
-            nodes2[1] = nodes2[1] .+ direction
-            prev = nodes2[1]
-            for i in 2:10
-                if !is_touching(prev, nodes2[i])
-                    nodes2[i] = move(prev, nodes2[i])
-                    i == 10 && push!(visited2, nodes2[i])
+    function num_tiles_visited(num_nodes::Int64)
+        visited = Set([(0, 0)])
+        nodes = [(0, 0) for _ in 1:num_nodes]
+        for cmd in data
+            direction, units = split(cmd, " ")
+            direction = move_delta(direction)
+            units = parse(Int64, units)
+            for _ in 1:units
+                nodes[begin] = nodes[begin] .+ direction  # move head
+                prev = nodes[begin]
+                for i in 2:num_nodes
+                    # move rest of rope nodes if needed
+                    if !is_touching(prev, nodes[i])
+                        nodes[i] = move(prev, nodes[i])
+                        i == num_nodes && push!(visited, nodes[i])  # track where tail goes
+                    end
+                    prev = nodes[i]
                 end
-                prev = nodes2[i]
             end
         end
+        return length(visited)
     end
-    println(length(visited1))
-    println(length(visited2))
+
+    println(num_tiles_visited(2))
+    println(num_tiles_visited(10))
 end
 
 """https://adventofcode.com/2022/day/10"""
@@ -314,60 +269,52 @@ end
 function eleven(; input::String = "2022/day11_input.txt")
     # parse input
     data = strvec(input)
-    function initial_state()
-        items = []
-        operations = []
-        tests = []
-        modulos = []
+    function init_state()
+        items, ops, tests, modulos = [], [], [], []
         for i in 1:6:length(data)
-            itms = split(data[i+1][findfirst(':', data[i+1])+2:end], ", ")
-            push!(items, parse.(Int64, itms))
-            ops = data[i+2][findfirst(':', data[i+2])+2:end]
-            value = ops[findlast(' ', ops)+1:end]
-            push!(operations,  # absolutely cursed, but it works
-                x -> ('*' in ops ? (*) : (+))(x, value == "old" ? x : parse(Int64, value))
-            )
-            div = parse(Int64, data[i+3][findlast(' ', data[i+3])+1:end])
-            true_monkey = parse(Int64, data[i+4][findlast(' ', data[i+4])+1:end])
-            false_monkey = parse(Int64, data[i+5][findlast(' ', data[i+5])+1:end])
-            push!(tests, x -> (x % div == 0) ? true_monkey : false_monkey)
-            push!(modulos, div)  # for part 2
+            push!(items, parse.(Int64, split(data[i+1], [':', ','])[begin+1:end]))
+            op_str = split(data[i+2], '=')[end]
+            op = '*' in op_str ? (*) : (+)
+            val = split(op_str)[end]
+            push!(ops, x -> op(x, val == "old" ? x : parse(Int64, val)))
+            divisor = parse(Int64, split(data[i+3])[end])
+            true_monkey = parse(Int64, split(data[i+4])[end])
+            false_monkey = parse(Int64, split(data[i+5])[end])
+            push!(tests, x -> (x % divisor == 0) ? true_monkey : false_monkey)
+            push!(modulos, divisor)  # part 2
         end
-        return items, operations, tests, modulos
+        return items, ops, tests, modulos
     end
 
     # simulate
-    items, operations, tests, _ = initial_state()  # part 1
-    times_inspected1 = [0 for _ in 1:8]
-    for _ in 1:20
-        for monkey in 1:length(data) ÷ 6
-            for i in 1:length(items[monkey])
-                times_inspected1[monkey] += 1
-                items[monkey][i] = operations[monkey](items[monkey][i]) ÷ 3
-                next_monkey = tests[monkey](items[monkey][i]) + 1
-                push!(items[next_monkey], items[monkey][i])
+    function simulate(items, ops, tests, num_simulations, reduce_worry_fn)
+        num_mnkys = length(data) ÷ 6
+        times_inspected = zeros(Int64, num_mnkys)
+        for _ in 1:num_simulations
+            for mnky in 1:num_mnkys
+                for i in 1:length(items[mnky])
+                    times_inspected[mnky] += 1
+                    items[mnky][i] = ops[mnky](items[mnky][i]) |> reduce_worry_fn
+                    next_mnky = tests[mnky](items[mnky][i]) + 1
+                    push!(items[next_mnky], items[mnky][i])
+                end
+                items[mnky] = []
             end
-            items[monkey] = []
         end
+        return times_inspected
     end
-    items, operations, tests, modulos = initial_state()  # part 2
-    times_inspected2 = [0 for _ in 1:8]
-    modulo = prod(modulos)
-    for _ in 1:10000
-        for monkey in 1:length(data) ÷ 6
-            for i in 1:length(items[monkey])
-                times_inspected2[monkey] += 1
-                items[monkey][i] = operations[monkey](items[monkey][i]) % modulo
-                next_monkey = tests[monkey](items[monkey][i]) + 1
-                push!(items[next_monkey], items[monkey][i])
-            end
-            items[monkey] = []
-        end
-    end
-    sort!(times_inspected1)
-    sort!(times_inspected2)
-    println(times_inspected1[end] * times_inspected1[end-1])
-    println(times_inspected2[end] * times_inspected2[end-1])
+
+    # part 1
+    items, ops, tests, _ = init_state()
+    times_inspected = simulate(items, ops, tests, 20, x -> x ÷ 3)
+    sort!(times_inspected)
+    println(times_inspected[end] * times_inspected[end-1])
+    # part 2
+    items, ops, tests, modulos = init_state()
+    times_inspected = simulate(items, ops, tests, 10_000, x -> x % prod(modulos))
+    sort!(times_inspected)
+    println(times_inspected[end] * times_inspected[end-1])
+
 end
 
 """https://adventofcode.com/2022/day/12"""
@@ -376,48 +323,44 @@ function twelve(; input::String = "2022/day12_input.txt")
     start, exit = findfirst(==('S'), data).I, findfirst(==('E'), data).I
     elevation(chr) = chr == 'S' ? 1 : (chr == 'E' ? 26 : Int(chr) - 96)
     nrow, ncol = size(data)[1], size(data)[2]
-
+    # bfs to search through whole map
     q = Queue{Tuple{Int64, Tuple{Int64, Int64}}}()
     enqueue!(q, (0, exit))
     visited = [exit]
-    least_steps1 = typemax(Int64)
-    least_steps2 = []
+    least_steps_to_start = typemax(Int64)  # part 1
+    least_steps_to_a = []  # part 2
     while !isempty(q)
         steps, x = dequeue!(q)
         steps += 1
-        for dir in [(0, 1), (0, -1), (-1, 0), (1, 0)]
-            p = x .+ dir
+        for p in [x .+ (0, 1), x .+ (0, -1), x .+ (-1, 0), x .+ (1, 0)]
             !(p[1] in 1:nrow && p[2] in 1:ncol) && continue
             if elevation(data[x...]) - elevation(data[p...]) <= 1
-                if p == start && least_steps1 > steps
-                    least_steps1 = steps
-                elseif elevation(data[p...]) == 1
-                    push!(least_steps2, steps)
+                if p == start && least_steps_to_start > steps
+                    least_steps_to_start = steps
                 elseif !(p in visited)
                     enqueue!(q, (steps, p))
                     push!(visited, p)
                 end
+                elevation(data[p...]) == 1 && push!(least_steps_to_a, steps)
             end
         end
     end
-    println(least_steps1)
-    println(minimum(least_steps2))
+    println(least_steps_to_start)
+    println(minimum(least_steps_to_a))
 end
 
 """https://adventofcode.com/2022/day/13"""
 function thirteen(; input::String = "2022/day13_input.txt")
-    data = strvec2(input)
-
     function conv(str)  # convert string -> list
-	splits = [1, length(str)]
+        splits = [1, length(str)]
         elements = []
         lvl = 0
         for (i, chr) in enumerate(str)
             chr == '[' && (lvl += 1)
             chr == ']' && (lvl -= 1)
-	    chr == ',' && lvl == 1 && insert!(splits, length(splits), i)
+            chr == ',' && lvl == 1 && insert!(splits, length(splits), i)
         end
-	if length(splits) == 2
+        if length(splits) == 2
             str == "[]" && return Vector{Int64}()
             startswith(str, '[') && return [conv(str[begin+1:end-1])]
             return parse(Int64, str)
@@ -432,7 +375,6 @@ function thirteen(; input::String = "2022/day13_input.txt")
         end
         return elements
     end
-
     function comp(arr1, arr2)
         for (i, e1) in enumerate(arr1)
             length(arr2) < i && return false  # arr2 ran out
@@ -440,18 +382,19 @@ function thirteen(; input::String = "2022/day13_input.txt")
             if e1 isa Int64 && e2 isa Int64
                 e1 < e2 && return true
                 e1 > e2 && return false
-	    elseif e1 isa Int64 || e2 isa Int64
-		e1 isa Int64 && (e1 = [e1])
-		e2 isa Int64 && (e2 = [e2])
-	    end
-	    if e1 isa Vector && e2 isa Vector
-		e1 == e2 && continue
-		return comp(e1, e2)
-	    end
+            elseif e1 isa Int64 || e2 isa Int64
+                e1 isa Int64 && (e1 = [e1])
+                e2 isa Int64 && (e2 = [e2])
+            end
+            if e1 isa Vector && e2 isa Vector
+                e1 == e2 && continue
+                return comp(e1, e2)
+            end
         end
-	return true
+        return true
     end
 
+    data = strvec2(input)
     data2 = strvec(input)
     dividers = ["[[2]]", "[[6]]"]
     push!(data2, dividers...)
@@ -468,29 +411,23 @@ function fourteen(; input::String = "2022/day14_input.txt")
     for ln in data
         push!(rockpaths, map(e -> parse.(Int64, e), split.(split(ln, " -> "), ",")))
     end
-    # make xmin, xmax bigger for part 2
+    # make x range (xmax - xmin) larger for part 2; x range > 2 * y range should be enough
     ymax = maximum(map(rp -> maximum(map(e -> e[2], rp)), rockpaths))  # ymin = 0
     xmin = minimum(map(rp -> minimum(map(e -> e[1], rp)), rockpaths)) - ymax
     xmax = maximum(map(rp -> maximum(map(e -> e[1], rp)), rockpaths)) + ymax
     num_sand = 0
+    in_range(p) = p[1] in 1:ymax+1 && p[2] in 1:xmax-xmin+1
 
     function place_rockpath(cave, rockpath::Vector{Vector{Int64}})
         # index cave with cave[y, x]
         for i in 1:length(rockpath)-1
-            first, second = rockpath[i], rockpath[i+1]
-            firstx, firsty = first[1]-xmin+1, first[2]+1
-            secondx, secondy = second[1]-xmin+1, second[2]+1
-            if firstx == secondx
-                yrange = firsty < secondy ? (firsty:secondy) : (secondy:firsty)
-                cave[yrange, firstx] .= '#'
-            else
-                xrange = firstx < secondx ? (firstx:secondx) : (secondx:firstx)
-                cave[firsty, xrange] .= '#'
-            end
+            first, second = rockpath[i:i+1]
+            fx, fy = first[1]-xmin+1, first[2]+1
+            sx, sy = second[1]-xmin+1, second[2]+1
+            fx == sx && (cave[fy < sy ? (fy:sy) : (sy:fy), fx] .= '#')
+            fy == fy && (cave[fy, fx < sx ? (fx:sx) : (sx:fx)] .= '#')
         end
     end
-
-    in_range(p) = p[1] in 1:ymax+1 && p[2] in 1:xmax-xmin+1
     function place_sand(cave, p::Tuple{Int64, Int64})
         below, dleft, dright = map(delta -> p .+ delta, [(1, 0), (1, -1), (1, 1)])
         b_valid, dl_valid, dr_valid = in_range.((below, dleft, dright))
@@ -521,8 +458,8 @@ function fourteen(; input::String = "2022/day14_input.txt")
         place_rockpath(cave, rockpath)
     end
     place_rockpath(cave, [[xmin, ymax], [xmax, ymax]])
-    while place_sand(cave, top)
-        cave[top...] == 'o' && break
+    while cave[top...] != 'o'
+        place_sand(cave, top)
     end
     println(num_sand)
 end
@@ -533,11 +470,11 @@ function fifteen(; input::String = "2022/day15_input.txt")
     sensors = Vector{Tuple{Int64, Int64}}()
     beacons = Vector{Tuple{Int64, Int64}}()
     for line in data
-        sstr, bstr= split(line, ": ")
-        sx = parse(Int64, sstr[13:findfirst(',', sstr)-1])
-        sy = parse(Int64, line[findfirst(',', line)+4:findfirst(':', line)-1])
-        bx = parse(Int64, bstr[24:findfirst(',', bstr)-1])
-        by = parse(Int64, bstr[findfirst(',', bstr)+4:end])
+        sstr, bstr = split(line, ": ")
+        sx = parse(Int64, split(sstr, [',', ' '], keepempty=false)[end-1][begin+2:end])
+        sy = parse(Int64, split(sstr, [',', ' '], keepempty=false)[end][begin+2:end])
+        bx = parse(Int64, split(bstr, [',', ' '], keepempty=false)[end-1][begin+2:end])
+        by = parse(Int64, split(bstr, [',', ' '], keepempty=false)[end][begin+2:end])
         push!(sensors, (sy, sx))
         push!(beacons, (by, bx))
     end
@@ -546,12 +483,11 @@ function fifteen(; input::String = "2022/day15_input.txt")
     function pts_within_dist(pt::Tuple{Int64, Int64}, d::Int64, filter_y)
         # get all pts within distance `d` away from `pt` at y level `filter_y`
         pts = Vector{Tuple{Int64, Int64}}()
-        y = filter_y - pt[1]
         for x in -d:d
-            new_pt = pt .+ (y, x)
+            new_pt = (filter_y, x)
             dist(pt, new_pt) <= d && push!(pts, new_pt)
         end
-        pts
+        return pts
     end
     function pts_at_dist(pt::Tuple{Int64, Int64}, d::Int64)
         # get all pts at distance `d` away from `pt`
@@ -562,34 +498,33 @@ function fifteen(; input::String = "2022/day15_input.txt")
             x += 1
             y -= 1
         end
-        pts
+        return pts
     end
 
-    invalid_pts = Vector{Tuple{Int64, Int64}}()  # part 1
-    # part 2; for each beacon, get all pts 1 dist away from the distance to its closest sensor
+    # part 1
+    invalid_pts = Vector{Tuple{Int64, Int64}}()
+    # part 2; for each beacon, get all pts 1 dist away from distance to closest sensor
     candidate_pts = Vector{Tuple{Int64, Int64}}()
+    in_range(pt) = pt[1] in 0:4_000_000 && pt[2] in 0:4_000_000
+    # main loop
+    occupied_pts = [sensors; beacons]
     for i in 1:length(sensors)
         sensor, beacon = sensors[i], beacons[i]
         d = dist(sensor, beacon)
-        pts1 = pts_within_dist(sensor, d, 2000000)
-        filter!(pt -> !(pt in sensors) && !(pt in beacons), pts1)
-        push!(invalid_pts, pts1...)
-
-        pts2 = pts_at_dist(sensor, d+1)
-        filter!(pt -> !(pt in sensors) && !(pt in beacons) && pt[1] in 0:4000000 && pt[2] in 0:4000000, pts2)
-        push!(candidate_pts, pts2...)
+        # part 1
+        pts = pts_within_dist(sensor, d, 2_000_000)
+        push!(invalid_pts, filter(pt -> !(pt in occupied_pts), pts)...)
+        # part 2
+        pts = pts_at_dist(sensor, d+1)
+        push!(candidate_pts, filter(pt -> !(pt in occupied_pts) && in_range(pt), pts)...)
     end
-    unique!(invalid_pts)
-    println(length(invalid_pts))
-    unique!(candidate_pts)
-    for pt in candidate_pts
-        valid = true
-        for i in 1:length(sensors)
-            sensor, beacon = sensors[i], beacons[i]
-            valid &= dist(sensor, pt) > dist(sensor, beacon)
-            !valid && break
+    println(length(unique(invalid_pts)))  # part 1
+    for pt in unique(candidate_pts)  # part 2
+        num_sensors = length(sensors)
+        if all([dist(sensors[i], pt) > dist(sensors[i], beacons[i]) for i in 1:num_sensors])
+            println(pt[2] * 4_000_000 + pt[1])
+            break  # there should only be one soln
         end
-        valid && (println(pt[2] * 4000000 + pt[1]); break)
     end
 end
 
