@@ -527,4 +527,70 @@ function fourteen(; input::String = "2022/day14_input.txt")
     println(num_sand)
 end
 
-fourteen()
+function fifteen(; input::String = "2022/day15_input.txt")
+    # parse input
+    data = strvec(input)
+    sensors = Vector{Tuple{Int64, Int64}}()
+    beacons = Vector{Tuple{Int64, Int64}}()
+    for line in data
+        sstr, bstr= split(line, ": ")
+        sx = parse(Int64, sstr[13:findfirst(',', sstr)-1])
+        sy = parse(Int64, line[findfirst(',', line)+4:findfirst(':', line)-1])
+        bx = parse(Int64, bstr[24:findfirst(',', bstr)-1])
+        by = parse(Int64, bstr[findfirst(',', bstr)+4:end])
+        push!(sensors, (sy, sx))
+        push!(beacons, (by, bx))
+    end
+
+    dist(p1, p2) = abs(p1[1] - p2[1]) + abs(p1[2] - p2[2])
+    function pts_within_dist(pt::Tuple{Int64, Int64}, d::Int64, filter_y)
+        # get all pts within distance `d` away from `pt` at y level `filter_y`
+        pts = Vector{Tuple{Int64, Int64}}()
+        y = filter_y - pt[1]
+        for x in -d:d
+            new_pt = pt .+ (y, x)
+            dist(pt, new_pt) <= d && push!(pts, new_pt)
+        end
+        pts
+    end
+    function pts_at_dist(pt::Tuple{Int64, Int64}, d::Int64)
+        # get all pts at distance `d` away from `pt`
+        pts = Vector{Tuple{Int64, Int64}}()
+        x, y = 0, d
+        while x <= d
+            push!(pts, pt .+ (y, x), pt .- (y, x))
+            x += 1
+            y -= 1
+        end
+        pts
+    end
+
+    invalid_pts = Vector{Tuple{Int64, Int64}}()  # part 1
+    # part 2; for each beacon, get all pts 1 dist away from the distance to its closest sensor
+    candidate_pts = Vector{Tuple{Int64, Int64}}()
+    for i in 1:length(sensors)
+        sensor, beacon = sensors[i], beacons[i]
+        d = dist(sensor, beacon)
+        pts1 = pts_within_dist(sensor, d, 2000000)
+        filter!(pt -> !(pt in sensors) && !(pt in beacons), pts1)
+        push!(invalid_pts, pts1...)
+
+        pts2 = pts_at_dist(sensor, d+1)
+        filter!(pt -> !(pt in sensors) && !(pt in beacons) && pt[1] in 0:4000000 && pt[2] in 0:4000000, pts2)
+        push!(candidate_pts, pts2...)
+    end
+    unique!(invalid_pts)
+    println(length(invalid_pts))
+    unique!(candidate_pts)
+    for pt in candidate_pts
+        valid = true
+        for i in 1:length(sensors)
+            sensor, beacon = sensors[i], beacons[i]
+            valid &= dist(sensor, pt) > dist(sensor, beacon)
+            !valid && break
+        end
+        valid && (println(pt[2] * 4000000 + pt[1]); break)
+    end
+end
+
+fifteen()
